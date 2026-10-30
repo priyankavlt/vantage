@@ -5,7 +5,9 @@
   "license": "Apache-2.0",
   "description": "Typed React chart components built on Apache ECharts.",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/echarts.ts"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
