@@ -8,6 +8,13 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint supports TypeScript < 6.1 only.
+      - dependency-name: typescript
+        versions: ['>=6.1.0']
+      # Keep Node types on the Node major we run (see .nvmrc).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'chore(deps)'
   - package-ecosystem: github-actions
