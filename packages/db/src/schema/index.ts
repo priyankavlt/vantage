@@ -3,3 +3,4 @@
  * that references `organization.id` (better-auth calls workspaces organizations).
  */
 export * from './auth';
+export * from './data-sources';

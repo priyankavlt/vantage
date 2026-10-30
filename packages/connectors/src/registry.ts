@@ -1,4 +1,5 @@
-import type { ConnectorDefinition, ConnectorType } from './types';
+import type { ConnectorType } from '@vantage/shared';
+import type { ConnectorDefinition } from './types';
 
 /**
  * Connectors register here. Step 3 of the MVP adds `postgres`.

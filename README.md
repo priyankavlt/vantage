@@ -23,14 +23,15 @@ Vantage aims for a modern, fully typed TypeScript stack and a first-class develo
 - **Self-hosted.** Your data and credentials stay on your infrastructure.
 - **SQL-first.** Write queries, save them, and turn results into charts.
 - **Dashboards you can share.** Grid layouts, auto-refresh, public read-only links.
-- **Safe by default.** User SQL is treated as untrusted: read-only sessions, timeouts and row limits on every query.
+- **Safe by default.** User SQL is treated as untrusted: every query runs in a read-only transaction,
+  one statement at a time, with a server-side timeout and a row limit. Credentials are encrypted at rest (AES-256-GCM).
 - **Built to extend.** A small connector interface makes new databases straightforward to add.
 
 ## MVP roadmap
 
 1. [x] Monorepo scaffold, CI, Docker Compose
-2. [ ] Auth and workspaces (users, workspaces, memberships)
-3. [ ] Data sources: Postgres connections with encrypted credentials, test connection, schema browser
+2. [x] Auth and workspaces (users, workspaces, memberships)
+3. [x] Data sources: Postgres connections with encrypted credentials, test connection, schema browser
 4. [ ] SQL editor: run queries, virtualized results table, saved queries
 5. [ ] Chart builder: bar, line, area, pie, table, big number
 6. [ ] Dashboards: grid layout, auto-refresh, public share links
@@ -51,7 +52,16 @@ pnpm db:up               # start Postgres in Docker
 pnpm dev                 # web on :3000, API on :4000
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:3000>, create an account, and add the **sample shop database**
+(started by `pnpm db:up`) under **Data sources**:
+
+| Field    | Value                                                          |
+| -------- | -------------------------------------------------------------- |
+| Host     | `localhost` (or `warehouse` when running everything in Docker) |
+| Port     | `5434` (or `5432` inside Docker)                               |
+| Database | `shop`                                                         |
+| User     | `vantage_reader`                                               |
+| Password | `reader`                                                       |
 
 **Everything in Docker** (no local Node needed):
 
