@@ -29,6 +29,13 @@
       "when": 1793338824427,
       "tag": "0003_charts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793339277239,
+      "tag": "0004_dashboards",
+      "breakpoints": true
     }
   ]
 }

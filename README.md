@@ -34,7 +34,7 @@ Vantage aims for a modern, fully typed TypeScript stack and a first-class develo
 3. [x] Data sources: Postgres connections with encrypted credentials, test connection, schema browser
 4. [x] SQL editor: run queries, virtualized results table, saved queries
 5. [x] Chart builder: bar, line, area, pie, table, big number
-6. [ ] Dashboards: grid layout, auto-refresh, public share links
+6. [x] Dashboards: grid layout, auto-refresh, public share links
 
 Later: MySQL, SQLite and BigQuery connectors, scheduled reports, row-level permissions, an embedding SDK.
 

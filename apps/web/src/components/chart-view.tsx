@@ -1,10 +1,17 @@
 'use client';
 
-import { BigNumber, buildChart, ChartDataError, EChart, type BuiltChart } from '@vantage/charts';
+import { BigNumber, buildChart, ChartDataError, type BuiltChart } from '@vantage/charts';
 import type { ChartSpec, QueryResult } from '@vantage/shared';
+import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 import { ResultsTable } from '@/components/results-table';
 import { useColorMode } from '@/hooks/use-color-mode';
+
+// ECharts needs the DOM; load it in the browser only.
+const EChart = dynamic(() => import('@vantage/charts/echart').then((m) => m.EChart), {
+  ssr: false,
+  loading: () => <div className="bg-muted/50 h-full w-full animate-pulse rounded-md" />,
+});
 
 /** Renders any chart spec against a query result. */
 export function ChartView({
