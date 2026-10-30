@@ -5,7 +5,7 @@ import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { BarChart3, Play, Save, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ResultsTable } from '@/components/results-table';
 import { SchemaBrowser } from '@/components/schema-browser';
 import { SqlEditor } from '@/components/sql-editor';
@@ -71,8 +71,10 @@ export function QueryWorkbench({
     setRun((prev) => ({ ...prev, status: 'running' }));
     try {
       const result = await runQuery(workspaceId, { dataSourceId, sql }, controller.signal);
-      setRun({ status: 'done', result });
+      if (abortRef.current === controller) setRun({ status: 'done', result });
     } catch (error) {
+      // A newer run replaced this one; it owns the state now.
+      if (abortRef.current !== controller) return;
       if (controller.signal.aborted) {
         setRun({ status: 'error', error: { message: 'Query cancelled' } });
         return;
@@ -94,6 +96,20 @@ export function QueryWorkbench({
 
   // Cancel any running query when leaving the page.
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Opening a saved query shows its results right away.
+  const autoRun = useEffectEvent(() => {
+    void execute();
+  });
+  const savedId = saved?.id;
+  useEffect(() => {
+    if (!savedId) return;
+    // Deferred so React's dev-mode double mount cancels the first timer instead of the query.
+    const timer = setTimeout(autoRun, 0);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [savedId]);
 
   async function save() {
     const body = {

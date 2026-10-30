@@ -20,6 +20,8 @@ export interface RunOptions {
   sql: string;
   timeoutMs?: number | undefined;
   maxRows?: number | undefined;
+  /** Cancel when the HTTP client disconnects. Off for results shared between requests. */
+  cancelOnDisconnect?: boolean;
 }
 
 /**
@@ -46,7 +48,8 @@ export async function runForRequest(
   const onClose = () => {
     if (!reply.raw.writableEnded) controller.abort();
   };
-  request.raw.socket.once('close', onClose);
+  const cancelOnDisconnect = options.cancelOnDisconnect ?? true;
+  if (cancelOnDisconnect) request.raw.socket.once('close', onClose);
   try {
     return await ctx.connections.get(row).execute(
       options.sql,

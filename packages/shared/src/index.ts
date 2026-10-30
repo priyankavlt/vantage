@@ -5,3 +5,4 @@ export * from './result';
 export * from './workspace';
 export * from './data-source';
 export * from './saved-query';
+export * from './dashboard';

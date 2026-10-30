@@ -59,7 +59,13 @@ export function registerSession(app: FastifyInstance, auth: Auth): void {
   app.decorateRequest('user', null);
   app.decorateRequest('workspace', null);
   app.addHook('onRequest', async (request) => {
-    if (request.url.startsWith('/api/auth/') || request.url === '/api/health') return;
+    if (
+      request.url.startsWith('/api/auth/') ||
+      request.url.startsWith('/api/public/') ||
+      request.url === '/api/health'
+    ) {
+      return;
+    }
     if (!request.headers.cookie) return;
     const session = await auth.api.getSession({ headers: toHeaders(request) });
     if (session) {

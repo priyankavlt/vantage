@@ -1,7 +1,7 @@
 'use client';
 
 import { PostgreSQL, sql, type SQLNamespace } from '@codemirror/lang-sql';
-import { keymap } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import type { TableInfo } from '@vantage/shared';
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useMemo } from 'react';
@@ -31,6 +31,7 @@ export const SqlEditor = forwardRef<ReactCodeMirrorRef, SqlEditorProps>(function
   const extensions = useMemo(
     () => [
       sql({ dialect: PostgreSQL, schema: toNamespace(tables ?? []), upperCaseKeywords: false }),
+      EditorView.lineWrapping,
       keymap.of([
         {
           key: 'Mod-Enter',

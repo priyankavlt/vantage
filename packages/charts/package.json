@@ -9,7 +9,8 @@
     "./src/echarts.ts"
   ],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./echart": "./src/EChart.tsx"
   },
   "scripts": {
     "lint": "eslint .",
