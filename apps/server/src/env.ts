@@ -13,6 +13,11 @@ const envSchema = z
     BETTER_AUTH_SECRET: z.string().min(32).optional(),
     BETTER_AUTH_URL: z.url().optional(),
     MIGRATIONS_DIR: z.string().optional(),
+    /** base64-encoded 32-byte key for encrypting data source credentials. */
+    VANTAGE_ENCRYPTION_KEY: z
+      .string()
+      .refine((v) => Buffer.from(v, 'base64').length === 32, 'Must be 32 bytes, base64-encoded')
+      .optional(),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   })
   .transform((env, ctx) => {

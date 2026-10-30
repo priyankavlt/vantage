@@ -1,5 +1,5 @@
 # Local development.
-#   pnpm db:up                       -> Postgres only (run the apps with `pnpm dev`)
+#   pnpm db:up                       -> Postgres + sample warehouse (run the apps with `pnpm dev`)
 #   docker compose --profile app up  -> Postgres + web + server in containers
 name: vantage
 
@@ -20,6 +20,22 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # Sample database to try Vantage with. Connect with:
+  #   host localhost (or "warehouse" from the server container), port 5434,
+  #   database shop, user vantage_reader, password reader
+  warehouse:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shop_admin
+      POSTGRES_PASSWORD: shop_admin
+      POSTGRES_DB: shop
+    ports:
+      - '5434:5432'
+    volumes:
+      - warehouse-data:/var/lib/postgresql
+      - ./docker/sample-warehouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   server:
     profiles: [app]
@@ -56,3 +72,4 @@ services:
 
 volumes:
   postgres-data:
+  warehouse-data:

@@ -7,7 +7,9 @@ const fake: ConnectorDefinition<{ url: string }> = {
   type: 'postgres',
   displayName: 'Fake',
   configSchema: z.object({ url: z.string() }),
-  connect: () => Promise.reject(new Error('not used')),
+  connect: () => {
+    throw new Error('not used');
+  },
 };
 
 describe('ConnectorRegistry', () => {
