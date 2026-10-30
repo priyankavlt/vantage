@@ -8,8 +8,9 @@ Open-source, self-hostable BI platform (Metabase/Superset alternative). TypeScri
 - `apps/server` — Fastify 5 API with Zod type provider. Built with tsdown.
 - `packages/shared` — Zod schemas + types used by both sides (query results, chart types, API errors).
 - `packages/db` — Drizzle ORM + node-postgres. App metadata only, never customer data.
-- `packages/connectors` — `ConnectorDefinition` / `Connection` interface, registry, `resolveQueryLimits`.
-- `packages/charts` — ECharts React wrapper (`EChart`) and chart renderer mapping.
+- `packages/connectors` — `ConnectorDefinition` / `Connection` interface, registry, `resolveQueryLimits`, Postgres connector.
+- `packages/charts` — pure `buildChart(spec, result, mode)` → ECharts options, palette, `BigNumber`.
+  The `EChart` component is at `@vantage/charts/echart` and must be loaded client-only.
 - `tooling/*` — shared tsconfig and ESLint flat configs.
 - Why a separate server: `docs/adr/0001-separate-api-server.md`.
 
@@ -29,4 +30,12 @@ Open-source, self-hostable BI platform (Metabase/Superset alternative). TypeScri
 - **User SQL is untrusted.** Connectors must use read-only transactions, database-side timeouts and row caps
   via `resolveQueryLimits`. Never log or return decrypted credentials.
 - Env vars used at build time must be listed in `turbo.json` `env`, or Turborepo strips them.
+- Server routes for user SQL go through `runForRequest` (apps/server/src/run-query.ts): workspace scoping,
+  concurrency cap, limits, disconnect-cancel.
+- Integration tests need `TEST_DATABASE_URL` (each suite creates and drops its own database).
 - Conventional Commits.
+
+## Project skills
+
+- `.claude/skills/add-connector` — adding a data source type (safety rules for untrusted SQL).
+- `.claude/skills/add-chart-type` — adding a visualization (spec → renderer → builder UI).
