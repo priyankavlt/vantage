@@ -11,6 +11,7 @@ import {
 import type { AppContext } from './context';
 import { HttpError } from './errors';
 import { registerAuthRoutes, registerSession } from './plugins/auth';
+import { chartRoutes } from './routes/charts';
 import { dataSourceRoutes } from './routes/data-sources';
 import { healthRoutes } from './routes/health';
 import { queryRoutes } from './routes/queries';
@@ -84,6 +85,7 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
   await app.register(workspaceRoutes, { prefix: '/api', ctx });
   await app.register(dataSourceRoutes, { prefix: '/api', ctx });
   await app.register(queryRoutes, { prefix: '/api', ctx });
+  await app.register(chartRoutes, { prefix: '/api', ctx });
 
   return app;
 }

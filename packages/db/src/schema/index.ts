@@ -5,3 +5,4 @@
 export * from './auth';
 export * from './data-sources';
 export * from './queries';
+export * from './charts';

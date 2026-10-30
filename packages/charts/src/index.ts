@@ -1,3 +1,7 @@
+export { BigNumber } from './BigNumber';
+export { buildChart, ChartDataError, pivotCartesian, suggestSpec, type BuiltChart } from './build';
 export { EChart, type EChartProps } from './EChart';
 export type { EChartOption } from './echarts';
+export { formatCompact, formatNumber } from './format';
+export { MAX_SERIES, THEMES, type ChartTheme, type ColorMode } from './palette';
 export { rendererFor, type RendererKind } from './renderer';

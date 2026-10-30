@@ -1,6 +1,9 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Workspace packages are symlinked under node_modules, which Tailwind skips. */
+@source '../../../../packages/charts/src';
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
