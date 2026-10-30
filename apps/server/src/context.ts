@@ -4,6 +4,8 @@ import { createAuth, type Auth } from './auth';
 import { ConnectionManager } from './connections';
 import { SecretBox } from './crypto';
 import type { Env } from './env';
+import { ConcurrencyLimiter } from './limiter';
+import { MAX_CONCURRENT_QUERIES_PER_WORKSPACE } from './run-query';
 
 /** Long-lived dependencies shared by every route. */
 export interface AppContext {
@@ -12,6 +14,8 @@ export interface AppContext {
   auth: Auth;
   secrets: SecretBox;
   connections: ConnectionManager;
+  /** Caps concurrent queries per workspace. */
+  queryLimiter: ConcurrencyLimiter;
   close: () => Promise<void>;
 }
 
@@ -34,6 +38,7 @@ export function createContext(env: Env): AppContext {
     auth,
     secrets,
     connections,
+    queryLimiter: new ConcurrencyLimiter(MAX_CONCURRENT_QUERIES_PER_WORKSPACE),
     close: async () => {
       await connections.closeAll();
       await close();
