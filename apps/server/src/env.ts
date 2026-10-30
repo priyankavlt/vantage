@@ -1,13 +1,39 @@
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  SERVER_HOST: z.string().default('0.0.0.0'),
-  SERVER_PORT: z.coerce.number().int().positive().default(4000),
-  WEB_ORIGIN: z.url().default('http://localhost:3000'),
-  DATABASE_URL: z.url().optional(),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-});
+const DEV_SECRET = 'vantage-dev-secret-do-not-use-in-production';
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    SERVER_HOST: z.string().default('0.0.0.0'),
+    SERVER_PORT: z.coerce.number().int().positive().default(4000),
+    WEB_ORIGIN: z.url().default('http://localhost:3000'),
+    DATABASE_URL: z.url().default('postgres://vantage:vantage@localhost:5432/vantage'),
+    BETTER_AUTH_SECRET: z.string().min(32).optional(),
+    BETTER_AUTH_URL: z.url().optional(),
+    MIGRATIONS_DIR: z.string().optional(),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  })
+  .transform((env, ctx) => {
+    if (!env.BETTER_AUTH_SECRET && env.NODE_ENV === 'production') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BETTER_AUTH_SECRET'],
+        message: 'Required in production',
+      });
+      return z.NEVER;
+    }
+    return {
+      ...env,
+      BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET ?? DEV_SECRET,
+      BETTER_AUTH_URL: env.BETTER_AUTH_URL ?? env.WEB_ORIGIN,
+      // src/ and dist/ both sit one level below apps/server.
+      MIGRATIONS_DIR:
+        env.MIGRATIONS_DIR ??
+        fileURLToPath(new URL('../../../packages/db/drizzle', import.meta.url)),
+    };
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

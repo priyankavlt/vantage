@@ -21,6 +21,8 @@ WORKDIR /app
 COPY --from=build /out/server/dist ./dist
 COPY --from=build /out/server/node_modules ./node_modules
 COPY --from=build /out/server/package.json ./package.json
+COPY --from=build /repo/packages/db/drizzle ./drizzle
+ENV MIGRATIONS_DIR=/app/drizzle
 USER node
 EXPOSE 4000
 CMD ["node", "dist/index.mjs"]

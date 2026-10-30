@@ -1,17 +1,17 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { buildApp, VERSION } from './app';
-import { loadEnv } from './env';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { VERSION } from './app';
+import { createTestApp, type TestApp } from './test/helpers';
 
-describe('server', () => {
+describe('server basics', () => {
+  let t: TestApp;
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    app = await buildApp(loadEnv({ NODE_ENV: 'test' }));
+    t = await createTestApp();
+    app = t.app;
   });
-  afterAll(async () => {
-    await app.close();
-  });
+  afterAll(() => t.close());
 
   it('GET /api/health returns ok', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/health' });
@@ -19,9 +19,15 @@ describe('server', () => {
     expect(res.json()).toEqual({ status: 'ok', version: VERSION });
   });
 
-  it('unknown routes return 404', async () => {
+  it('unknown routes return 404 in the ApiError shape', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/nope' });
     expect(res.statusCode).toBe(404);
     expect(res.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+  });
+
+  it('workspace routes require a session', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/ws_1' });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({ error: { code: 'UNAUTHORIZED' } });
   });
 });

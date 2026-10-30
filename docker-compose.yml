@@ -31,6 +31,9 @@ services:
       DATABASE_URL: postgres://vantage:vantage@postgres:5432/vantage
       SERVER_PORT: 4000
       WEB_ORIGIN: http://localhost:3000
+      BETTER_AUTH_URL: http://localhost:3000
+      # Local only. Set a real secret (openssl rand -base64 32) for any shared deployment.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-compose-secret-change-me-0123456789}
     ports:
       - '4000:4000'
     depends_on:
