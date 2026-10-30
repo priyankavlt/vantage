@@ -18,6 +18,14 @@ describe('TtlCache', () => {
     await expect(cache.get('a', () => Promise.resolve(2), 1)).resolves.toBe(2);
   });
 
+  it('can keep failures for a while', async () => {
+    const cache = new TtlCache<number>(1_000, { failureTtlMs: 60_000 });
+    const failing = vi.fn(() => Promise.reject(new Error('slow')));
+    await expect(cache.get('a', failing, 0)).rejects.toThrow();
+    await expect(cache.get('a', failing, 1)).rejects.toThrow();
+    expect(failing).toHaveBeenCalledTimes(1);
+  });
+
   it('deletes by prefix', async () => {
     const cache = new TtlCache<number>(1_000);
     const load = vi.fn(() => Promise.resolve(1));

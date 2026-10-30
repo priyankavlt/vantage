@@ -25,6 +25,17 @@ describe('server basics', () => {
     expect(res.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
   });
 
+  it('blocks state-changing requests from other origins', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/workspaces/ws_1/dashboards',
+      headers: { origin: 'https://evil.example' },
+      payload: { name: 'x' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toMatchObject({ error: { code: 'BAD_ORIGIN' } });
+  });
+
   it('workspace routes require a session', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/workspaces/ws_1' });
     expect(res.statusCode).toBe(401);

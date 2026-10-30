@@ -45,6 +45,8 @@ describe.skipIf(!url)('postgres connector (integration)', () => {
     const result = await conn.test();
     expect(result.ok).toBe(true);
     expect(result.serverVersion).toMatch(/^PostgreSQL/);
+    // The test user is a superuser (as in most local setups), which deserves a warning.
+    expect(result.warnings?.[0]).toMatch(/superuser/);
   });
 
   it('runs a query and maps types', async () => {

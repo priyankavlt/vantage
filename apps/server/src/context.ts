@@ -5,7 +5,10 @@ import { ConnectionManager } from './connections';
 import { SecretBox } from './crypto';
 import type { Env } from './env';
 import { ConcurrencyLimiter } from './limiter';
-import { MAX_CONCURRENT_QUERIES_PER_WORKSPACE } from './run-query';
+import {
+  MAX_CONCURRENT_PUBLIC_QUERIES_PER_WORKSPACE,
+  MAX_CONCURRENT_QUERIES_PER_WORKSPACE,
+} from './run-query';
 
 /** Long-lived dependencies shared by every route. */
 export interface AppContext {
@@ -16,6 +19,8 @@ export interface AppContext {
   connections: ConnectionManager;
   /** Caps concurrent queries per workspace. */
   queryLimiter: ConcurrencyLimiter;
+  /** Separate, smaller cap for anonymous public-link traffic. */
+  publicQueryLimiter: ConcurrencyLimiter;
   close: () => Promise<void>;
 }
 
@@ -27,7 +32,7 @@ export function createContext(env: Env): AppContext {
     baseURL: env.BETTER_AUTH_URL,
     trustedOrigins: [env.WEB_ORIGIN],
   });
-  // Production requires a real key (enforced in env.ts); dev derives one from the auth secret.
+  // Production requires VANTAGE_ENCRYPTION_KEY (enforced in env.ts); dev/test derive a key.
   const secrets = env.VANTAGE_ENCRYPTION_KEY
     ? SecretBox.fromBase64(env.VANTAGE_ENCRYPTION_KEY)
     : SecretBox.fromPassphrase(env.BETTER_AUTH_SECRET);
@@ -39,6 +44,7 @@ export function createContext(env: Env): AppContext {
     secrets,
     connections,
     queryLimiter: new ConcurrencyLimiter(MAX_CONCURRENT_QUERIES_PER_WORKSPACE),
+    publicQueryLimiter: new ConcurrencyLimiter(MAX_CONCURRENT_PUBLIC_QUERIES_PER_WORKSPACE),
     close: async () => {
       await connections.closeAll();
       await close();

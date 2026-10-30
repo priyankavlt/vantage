@@ -63,11 +63,16 @@ Open <http://localhost:3000>, create an account, and add the **sample shop datab
 | User     | `vantage_reader`                                               |
 | Password | `reader`                                                       |
 
-**Everything in Docker** (no local Node needed):
+**Everything in Docker** (no local Node needed). Production mode needs two secrets in `.env`:
 
 ```sh
+cp .env.example .env
+echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+echo "VANTAGE_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
 docker compose --profile app up --build
 ```
+
+Keep `VANTAGE_ENCRYPTION_KEY` safe: saved database passwords can't be decrypted without it.
 
 ## Repository layout
 

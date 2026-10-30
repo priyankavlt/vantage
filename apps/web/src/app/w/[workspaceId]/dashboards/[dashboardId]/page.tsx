@@ -44,6 +44,9 @@ function ShareControls({
   const [copied, setCopied] = useState(false);
   const url = token ? `${window.location.origin}/s/${token}` : null;
 
+  if (share.error) {
+    return <p className="text-destructive text-sm">{share.error.message}</p>;
+  }
   if (!url) {
     return (
       <Button

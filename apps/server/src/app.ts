@@ -79,6 +79,19 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
     return reply.status(404).send(body);
   });
 
+  // CSRF defense in depth: browsers always send Origin on state-changing requests.
+  // Reject ones from other origins. (better-auth checks its own routes.)
+  const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+  app.addHook('onRequest', (request, _reply, done) => {
+    const origin = request.headers.origin;
+    const exempt = SAFE_METHODS.has(request.method) || request.url.startsWith('/api/auth/');
+    if (!exempt && origin !== undefined && origin !== env.WEB_ORIGIN) {
+      done(new HttpError(403, 'BAD_ORIGIN', 'Cross-origin request blocked'));
+      return;
+    }
+    done();
+  });
+
   registerAuthRoutes(app, ctx.auth);
   registerSession(app, ctx.auth);
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { CheckCircle2, TerminalSquare, XCircle } from 'lucide-react';
+import { TerminalSquare } from 'lucide-react';
 import Link from 'next/link';
 import { use } from 'react';
 import { PageHeader } from '@/components/app-shell';
 import { SchemaBrowser } from '@/components/schema-browser';
+import { TestResult } from '@/components/test-result';
 import { ErrorMessage } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,17 +50,7 @@ export default function DataSourcePage({
         }
       />
       <div className="flex flex-col gap-4 px-8 py-6">
-        {test.data &&
-          (test.data.ok ? (
-            <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-              <CheckCircle2 className="size-4" /> Connected · {test.data.serverVersion} ·{' '}
-              {test.data.latencyMs} ms
-            </p>
-          ) : (
-            <p className="text-destructive flex items-center gap-2 text-sm">
-              <XCircle className="size-4" /> {test.data.message}
-            </p>
-          ))}
+        {test.data && <TestResult result={test.data} />}
         <ErrorMessage>{schema.error?.message}</ErrorMessage>
         <section className="max-w-xl">
           <h2 className="mb-2 font-medium">

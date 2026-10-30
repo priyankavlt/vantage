@@ -6,6 +6,7 @@ import { HttpError } from './errors';
 import { findDataSource } from './routes/data-sources';
 
 export const MAX_CONCURRENT_QUERIES_PER_WORKSPACE = 5;
+export const MAX_CONCURRENT_PUBLIC_QUERIES_PER_WORKSPACE = 2;
 
 const STATUS_FOR: Record<QueryError['code'], number> = {
   QUERY_FAILED: 400,
@@ -22,6 +23,8 @@ export interface RunOptions {
   maxRows?: number | undefined;
   /** Cancel when the HTTP client disconnects. Off for results shared between requests. */
   cancelOnDisconnect?: boolean;
+  /** Which concurrency pool to use. Public links get their own, so they can't starve members. */
+  pool?: 'members' | 'public';
 }
 
 /**
@@ -36,7 +39,8 @@ export async function runForRequest(
   options: RunOptions,
 ): Promise<QueryResult> {
   const row = await findDataSource(ctx, options.workspaceId, options.dataSourceId);
-  const release = ctx.queryLimiter.tryAcquire(options.workspaceId);
+  const limiter = options.pool === 'public' ? ctx.publicQueryLimiter : ctx.queryLimiter;
+  const release = limiter.tryAcquire(options.workspaceId);
   if (!release) {
     throw new HttpError(
       429,

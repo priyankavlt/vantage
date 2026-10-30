@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { chart, dashboard } from '@vantage/db/schema';
 import {
+  chartColumns,
   createDashboardRequestSchema,
   dashboardItemSchema,
   dashboardSchema,
@@ -16,13 +17,32 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import type { AppContext } from '../context';
 import { badRequest, HttpError, notFound } from '../errors';
-import { requireWorkspace } from '../plugins/auth';
+import { assertRole, requireWorkspace } from '../plugins/auth';
 import { runForRequest } from '../run-query';
+import { RateLimiter } from '../rate-limiter';
 import { TtlCache } from '../ttl-cache';
 import { findChart, toChartDto } from './charts';
 import { findQuery } from './queries';
 
 const PUBLIC_RESULT_TTL_MS = 30_000;
+const PUBLIC_REQUESTS_PER_MINUTE = 300;
+
+const chartUnavailable = () =>
+  new HttpError(503, 'CHART_UNAVAILABLE', 'This chart is unavailable right now');
+const tooManyRequests = () =>
+  new HttpError(429, 'RATE_LIMITED', 'Too many requests for this dashboard, try again shortly');
+
+/** Keep only `columns` (in result order). `null` keeps everything. */
+export function projectColumns(result: QueryResult, columns: string[] | null): QueryResult {
+  if (columns === null) return result;
+  const wanted = new Set(columns);
+  const keep = result.columns.flatMap((c, i) => (wanted.has(c.name) ? [i] : []));
+  return {
+    ...result,
+    columns: keep.map((i) => result.columns[i]).filter((c) => c !== undefined),
+    rows: result.rows.map((row) => keep.map((i) => row[i] ?? null)),
+  };
+}
 
 const workspaceParams = z.object({ workspaceId: z.string() });
 const dashboardParams = workspaceParams.extend({ dashboardId: z.string() });
@@ -53,7 +73,10 @@ const toDto = (row: Row): Dashboard => ({
 export const dashboardRoutes: FastifyPluginAsyncZod<{ ctx: AppContext }> = (app, { ctx }) => {
   const guard = requireWorkspace(ctx);
   const base = '/workspaces/:workspaceId/dashboards';
-  const publicResults = new TtlCache<QueryResult>(PUBLIC_RESULT_TTL_MS);
+  const publicResults = new TtlCache<QueryResult>(PUBLIC_RESULT_TTL_MS, {
+    failureTtlMs: PUBLIC_RESULT_TTL_MS,
+  });
+  const publicRate = new RateLimiter(PUBLIC_REQUESTS_PER_MINUTE, 60_000);
 
   async function findDashboard(workspaceId: string, id: string): Promise<Row> {
     const [row] = await ctx.db
@@ -181,6 +204,8 @@ export const dashboardRoutes: FastifyPluginAsyncZod<{ ctx: AppContext }> = (app,
     `${base}/:dashboardId/share`,
     { schema: { params: dashboardParams, response: { 200: dashboardSchema } }, preHandler: guard },
     async (request) => {
+      // Public links outlive a member's access, so only owners and admins may publish them.
+      assertRole(request, ['owner', 'admin']);
       const { workspaceId, dashboardId } = request.params;
       const existing = await findDashboard(workspaceId, dashboardId);
       if (existing.shareToken) publicResults.delete(`${existing.shareToken}:`);
@@ -196,6 +221,7 @@ export const dashboardRoutes: FastifyPluginAsyncZod<{ ctx: AppContext }> = (app,
     `${base}/:dashboardId/share`,
     { schema: { params: dashboardParams, response: { 200: dashboardSchema } }, preHandler: guard },
     async (request) => {
+      assertRole(request, ['owner', 'admin']);
       const { workspaceId, dashboardId } = request.params;
       const existing = await findDashboard(workspaceId, dashboardId);
       if (existing.shareToken) publicResults.delete(`${existing.shareToken}:`);
@@ -219,6 +245,7 @@ export const dashboardRoutes: FastifyPluginAsyncZod<{ ctx: AppContext }> = (app,
     '/public/dashboards/:token',
     { schema: { params: tokenParams, response: { 200: publicDashboardSchema } } },
     async (request) => {
+      if (!publicRate.hit(request.params.token)) throw tooManyRequests();
       const row = await findShared(request.params.token);
       const items = parseItems(row.items);
       const chartIds = [...new Set(items.map((i) => i.chartId))];
@@ -251,23 +278,37 @@ export const dashboardRoutes: FastifyPluginAsyncZod<{ ctx: AppContext }> = (app,
     },
     async (request, reply) => {
       const { token, chartId } = request.params;
+      if (!publicRate.hit(token)) throw tooManyRequests();
       const row = await findShared(token);
       // Only charts placed on this dashboard can be read through its link.
       if (!parseItems(row.items).some((i) => i.chartId === chartId)) throw notFound('Chart');
       const c = await findChart(ctx, row.workspaceId, chartId);
       const query = await findQuery(ctx, row.workspaceId, c.queryId);
       const dataSourceId = query.dataSourceId;
-      if (!dataSourceId)
-        throw new HttpError(400, 'NO_DATA_SOURCE', 'This chart has no data source');
-      // Cache briefly so a busy public link can't hammer the database.
-      return publicResults.get(`${token}:${chartId}:${query.updatedAt.getTime()}`, () =>
-        runForRequest(ctx, request, reply, {
-          workspaceId: row.workspaceId,
-          dataSourceId,
-          sql: query.sql,
-          cancelOnDisconnect: false,
-        }),
-      );
+      if (!dataSourceId) throw chartUnavailable();
+      const columns = chartColumns(toChartDto(c).spec);
+
+      // Cached (successes and failures) so a busy or abusive link can't hammer the database.
+      const key = `${token}:${chartId}:${query.updatedAt.getTime()}:${c.updatedAt.getTime()}`;
+      try {
+        return await publicResults.get(key, async () =>
+          // Only the columns the chart draws leave the server.
+          projectColumns(
+            await runForRequest(ctx, request, reply, {
+              workspaceId: row.workspaceId,
+              dataSourceId,
+              sql: query.sql,
+              cancelOnDisconnect: false,
+              pool: 'public',
+            }),
+            columns,
+          ),
+        );
+      } catch (error) {
+        // Never show database errors (hostnames, values) to anonymous viewers.
+        request.log.warn({ err: error, chartId }, 'public chart failed');
+        throw chartUnavailable();
+      }
     },
   );
 

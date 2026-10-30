@@ -64,3 +64,23 @@ export const updateChartRequestSchema = z.object({
   spec: chartSpecSchema.optional(),
 });
 export type UpdateChartRequest = z.infer<typeof updateChartRequestSchema>;
+
+/** The result columns a chart reads, or `null` when it shows every column (tables). */
+export function chartColumns(spec: ChartSpec): string[] | null {
+  switch (spec.type) {
+    case 'bar':
+    case 'line':
+    case 'area':
+      return [
+        spec.config.x,
+        ...spec.config.y,
+        ...(spec.config.series === undefined ? [] : [spec.config.series]),
+      ];
+    case 'pie':
+      return [spec.config.label, spec.config.value];
+    case 'big-number':
+      return [spec.config.value];
+    case 'table':
+      return null;
+  }
+}
