@@ -6,6 +6,7 @@ export class ApiRequestError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = 'ApiRequestError';
@@ -31,7 +32,12 @@ export async function api<T>(
   if (!res.ok) {
     const parsed = apiErrorSchema.safeParse(body);
     throw parsed.success
-      ? new ApiRequestError(res.status, parsed.data.error.code, parsed.data.error.message)
+      ? new ApiRequestError(
+          res.status,
+          parsed.data.error.code,
+          parsed.data.error.message,
+          parsed.data.error.details,
+        )
       : new ApiRequestError(res.status, 'HTTP_ERROR', `Request failed (${res.status})`);
   }
   return schema.parse(body);
