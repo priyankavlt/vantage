@@ -9,4 +9,4 @@ export const postgresConnector: ConnectorDefinition<PostgresConfig> = {
   connect: connectPostgres,
 };
 
-export { connectPostgres, normalizeSql } from './connection';
+export { connectPostgres, normalizeSql, privilegeWarnings } from './connection';

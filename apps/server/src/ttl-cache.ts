@@ -1,27 +1,33 @@
 /**
  * Tiny promise cache with a time-to-live. Concurrent callers for the same key
- * share one in-flight promise; failures are not cached.
+ * share one in-flight promise. Failures are kept for `failureTtlMs` (0 = not cached),
+ * so a failing or slow query can't be retried in a tight loop.
  */
 export class TtlCache<T> {
   readonly #entries = new Map<string, { expires: number; value: Promise<T> }>();
 
   constructor(
     private readonly ttlMs: number,
-    private readonly maxEntries = 1_000,
+    private readonly options: { maxEntries?: number; failureTtlMs?: number } = {},
   ) {}
 
   get(key: string, load: () => Promise<T>, now = Date.now()): Promise<T> {
     const hit = this.#entries.get(key);
     if (hit && hit.expires > now) return hit.value;
 
-    if (this.#entries.size >= this.maxEntries) {
+    const maxEntries = this.options.maxEntries ?? 1_000;
+    if (this.#entries.size >= maxEntries) {
       for (const [k, v] of this.#entries) if (v.expires <= now) this.#entries.delete(k);
-      if (this.#entries.size >= this.maxEntries) this.#entries.clear();
+      if (this.#entries.size >= maxEntries) this.#entries.clear();
     }
     const value = load();
-    this.#entries.set(key, { expires: now + this.ttlMs, value });
+    const entry = { expires: now + this.ttlMs, value };
+    this.#entries.set(key, entry);
     value.catch(() => {
-      if (this.#entries.get(key)?.value === value) this.#entries.delete(key);
+      if (this.#entries.get(key) !== entry) return;
+      const failureTtl = this.options.failureTtlMs ?? 0;
+      if (failureTtl > 0) entry.expires = Date.now() + failureTtl;
+      else this.#entries.delete(key);
     });
     return value;
   }

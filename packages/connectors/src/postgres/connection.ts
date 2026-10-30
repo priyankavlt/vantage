@@ -87,14 +87,66 @@ function createTypes(): pg.TypeOverrides {
   return types;
 }
 
+interface PrivilegeRow {
+  superuser: boolean;
+  exec_program: boolean | null;
+  server_files: boolean | null;
+  signal_backend: boolean | null;
+}
+
+/**
+ * Read-only transactions don't stop everything (e.g. COPY … TO PROGRAM,
+ * pg_terminate_backend, file access). Warn when the role can do those.
+ */
+export function privilegeWarnings(row: PrivilegeRow | undefined): string[] {
+  if (!row) return [];
+  if (row.superuser) {
+    return [
+      'This user is a superuser. Connect with a role that can only SELECT: read-only mode does not stop superusers from running programs or reading server files.',
+    ];
+  }
+  const warnings: string[] = [];
+  if (row.exec_program)
+    warnings.push('This user can run server programs (pg_execute_server_program).');
+  if (row.server_files)
+    warnings.push('This user can read or write server files (pg_*_server_files).');
+  if (row.signal_backend)
+    warnings.push('This user can cancel or end other sessions (pg_signal_backend).');
+  return warnings;
+}
+
+const PRIVILEGE_SQL = `
+  select r.rolsuper as superuser,
+         pg_has_role(current_user, 'pg_execute_server_program', 'member') as exec_program,
+         pg_has_role(current_user, 'pg_read_server_files', 'member')
+           or pg_has_role(current_user, 'pg_write_server_files', 'member') as server_files,
+         pg_has_role(current_user, 'pg_signal_backend', 'member') as signal_backend
+    from pg_roles r where r.rolname = current_user`;
+
 export function connectPostgres(config: PostgresConfig): Connection {
-  const pool = new pg.Pool({
+  const connection = {
     host: config.host,
     port: config.port,
     database: config.database,
     user: config.user,
     password: config.password,
     ssl: sslOption(config.ssl),
+  };
+
+  /** Cancel on a separate short-lived connection, so it works even when the pool is full. */
+  async function cancelBackend(pid: number): Promise<void> {
+    const client = new pg.Client({ ...connection, connectionTimeoutMillis: 5_000 });
+    client.on('error', () => undefined);
+    try {
+      await client.connect();
+      await client.query('select pg_cancel_backend($1)', [pid]);
+    } finally {
+      await client.end().catch(() => undefined);
+    }
+  }
+
+  const pool = new pg.Pool({
+    ...connection,
     max: 5,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
@@ -133,7 +185,7 @@ export function connectPostgres(config: PostgresConfig): Connection {
     const cancel = () => {
       cancelled = true;
       if (pid === undefined) return;
-      pool.query('select pg_cancel_backend($1)', [pid]).catch(() => undefined);
+      cancelBackend(pid).catch(() => undefined);
     };
     signal?.addEventListener('abort', cancel, { once: true });
     // Backstop in case the server ignores statement_timeout.
@@ -170,14 +222,21 @@ export function connectPostgres(config: PostgresConfig): Connection {
     async test() {
       const started = performance.now();
       try {
-        const version = await readOnly(10_000, async (client) => {
+        const { version, warnings } = await readOnly(10_000, async (client) => {
           const res = await client.query<{ v: string }>('select version() as v');
-          return res.rows[0]?.v ?? '';
+          let privileges: PrivilegeRow | undefined;
+          try {
+            privileges = (await client.query<PrivilegeRow>(PRIVILEGE_SQL)).rows[0];
+          } catch {
+            // Older servers lack some predefined roles; skip the advice.
+          }
+          return { version: res.rows[0]?.v ?? '', warnings: privilegeWarnings(privileges) };
         });
         return {
           ok: true,
           serverVersion: version.split(' on ')[0] ?? version,
           latencyMs: Math.round(performance.now() - started),
+          ...(warnings.length > 0 ? { warnings } : {}),
         };
       } catch (error) {
         return {

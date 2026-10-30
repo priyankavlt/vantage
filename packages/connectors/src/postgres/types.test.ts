@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSql } from './connection';
+import { normalizeSql, privilegeWarnings } from './connection';
 import { describeOid, toCell } from './types';
 
 describe('postgres value mapping', () => {
@@ -29,5 +29,25 @@ describe('postgres value mapping', () => {
 
   it('strips trailing semicolons', () => {
     expect(normalizeSql('select 1;  \n;')).toBe('select 1');
+  });
+});
+
+describe('privilegeWarnings', () => {
+  const none = {
+    superuser: false,
+    exec_program: false,
+    server_files: false,
+    signal_backend: false,
+  };
+
+  it('is quiet for a least-privilege role', () => {
+    expect(privilegeWarnings(none)).toEqual([]);
+  });
+
+  it('warns about superusers and dangerous roles', () => {
+    expect(privilegeWarnings({ ...none, superuser: true })[0]).toMatch(/superuser/);
+    expect(privilegeWarnings({ ...none, exec_program: true, signal_backend: true })).toHaveLength(
+      2,
+    );
   });
 });

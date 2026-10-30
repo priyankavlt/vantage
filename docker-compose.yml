@@ -48,8 +48,10 @@ services:
       SERVER_PORT: 4000
       WEB_ORIGIN: http://localhost:3000
       BETTER_AUTH_URL: http://localhost:3000
-      # Local only. Set a real secret (openssl rand -base64 32) for any shared deployment.
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-compose-secret-change-me-0123456789}
+      # Required: set both in .env (see .env.example) with `openssl rand -base64 32`.
+      # The server refuses to start in production without them.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      VANTAGE_ENCRYPTION_KEY: ${VANTAGE_ENCRYPTION_KEY:-}
     ports:
       - '4000:4000'
     depends_on:

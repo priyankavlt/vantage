@@ -45,6 +45,8 @@ export const testConnectionResultSchema = z.object({
   serverVersion: z.string().optional(),
   message: z.string().optional(),
   latencyMs: z.number().nonnegative(),
+  /** Safety advice, e.g. the user has more privileges than reading needs. */
+  warnings: z.array(z.string()).optional(),
 });
 export type TestConnectionResult = z.infer<typeof testConnectionResultSchema>;
 

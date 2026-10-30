@@ -109,7 +109,8 @@ describe.skipIf(!TEST_DATABASE_URL)('dashboards (integration)', () => {
       method: 'GET',
       url: `/api/public/dashboards/${token}/charts/${chartId}/data`,
     });
-    expect(data.json()).toMatchObject({ rows: [['users', 42]] });
+    // Only the charted column (value) is public.
+    expect(data.json()).toMatchObject({ rows: [[42]] });
 
     // A chart that isn't on the dashboard can't be read through the link.
     const hidden = await t.app.inject({
@@ -126,6 +127,113 @@ describe.skipIf(!TEST_DATABASE_URL)('dashboards (integration)', () => {
     expect(revoked.json()).toMatchObject({ shareToken: null });
     const gone = await t.app.inject({ method: 'GET', url: `/api/public/dashboards/${token}` });
     expect(gone.statusCode).toBe(404);
+  });
+
+  it('only owners and admins can publish links; public data is projected and errors are generic', async () => {
+    const id = (
+      await t.app.inject({
+        method: 'POST',
+        url: url(),
+        headers: { cookie },
+        payload: { name: 'Proj' },
+      })
+    ).json<{ id: string }>().id;
+    // A bar chart over a query with an extra column the chart doesn't draw.
+    const q = (
+      await t.app.inject({
+        method: 'POST',
+        url: `/api/workspaces/${ws}/queries`,
+        headers: { cookie },
+        payload: {
+          name: 'Secret column',
+          sql: "select name, value, 'secret@example.com' as email from kpis",
+          dataSourceId: (
+            await t.app.inject({
+              method: 'GET',
+              url: `/api/workspaces/${ws}/data-sources`,
+              headers: { cookie },
+            })
+          ).json<{ id: string }[]>()[0]?.id,
+        },
+      })
+    ).json<{ id: string }>().id;
+    const barId = (
+      await t.app.inject({
+        method: 'POST',
+        url: `/api/workspaces/${ws}/charts`,
+        headers: { cookie },
+        payload: {
+          name: 'Bar',
+          queryId: q,
+          spec: { type: 'bar', config: { x: 'name', y: ['value'] } },
+        },
+      })
+    ).json<{ id: string }>().id;
+    const brokenQ = (
+      await t.app.inject({
+        method: 'POST',
+        url: `/api/workspaces/${ws}/queries`,
+        headers: { cookie },
+        payload: { name: 'Broken', sql: 'select * from missing_table_xyz', dataSourceId: null },
+      })
+    ).json<{ id: string }>().id;
+    const brokenId = (
+      await t.app.inject({
+        method: 'POST',
+        url: `/api/workspaces/${ws}/charts`,
+        headers: { cookie },
+        payload: { name: 'Broken', queryId: brokenQ, spec: { type: 'table', config: {} } },
+      })
+    ).json<{ id: string }>().id;
+    await t.app.inject({
+      method: 'PATCH',
+      url: url(`/${id}`),
+      headers: { cookie },
+      payload: {
+        items: [
+          { i: 'a', chartId: barId, x: 0, y: 0, w: 6, h: 3 },
+          { i: 'b', chartId: brokenId, x: 6, y: 0, w: 6, h: 3 },
+        ],
+      },
+    });
+
+    // A plain member of the workspace can't publish.
+    const memberCookie = await signUp(t.app, { name: 'Member', email: 'member@example.com' });
+    const session = await t.ctx.auth.api.getSession({
+      headers: new Headers({ cookie: memberCookie }),
+    });
+    await t.ctx.auth.api.addMember({
+      body: { userId: session?.user.id ?? '', organizationId: ws, role: 'member' },
+    });
+    const denied = await t.app.inject({
+      method: 'POST',
+      url: url(`/${id}/share`),
+      headers: { cookie: memberCookie },
+    });
+    expect(denied.statusCode).toBe(403);
+
+    const token = (
+      await t.app.inject({ method: 'POST', url: url(`/${id}/share`), headers: { cookie } })
+    ).json<{ shareToken: string }>().shareToken;
+
+    const data = await t.app.inject({
+      method: 'GET',
+      url: `/api/public/dashboards/${token}/charts/${barId}/data`,
+    });
+    expect(data.json<{ columns: { name: string }[] }>().columns.map((c) => c.name)).toEqual([
+      'name',
+      'value',
+    ]);
+    expect(data.body).not.toContain('secret@example.com');
+
+    const broken = await t.app.inject({
+      method: 'GET',
+      url: `/api/public/dashboards/${token}/charts/${brokenId}/data`,
+    });
+    expect(broken.statusCode).toBe(503);
+    expect(broken.json()).toEqual({
+      error: { code: 'CHART_UNAVAILABLE', message: 'This chart is unavailable right now' },
+    });
   });
 
   it('rejects charts from other workspaces and duplicate tile ids', async () => {

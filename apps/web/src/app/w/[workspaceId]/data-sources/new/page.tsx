@@ -1,14 +1,11 @@
 'use client';
 
-import {
-  postgresConfigSchema,
-  type DataSourceConfig,
-  type TestConnectionResult,
-} from '@vantage/shared';
-import { CheckCircle2, ShieldCheck, XCircle } from 'lucide-react';
+import { postgresConfigSchema, type DataSourceConfig } from '@vantage/shared';
+import { ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { use, useRef, useState, type SubmitEvent } from 'react';
 import { PageHeader } from '@/components/app-shell';
+import { TestResult } from '@/components/test-result';
 import { ErrorMessage } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,18 +29,6 @@ function readForm(form: HTMLFormElement): { name: string; config: DataSourceConf
   });
   if (!parsed.success) return 'Please fill in host, database and user.';
   return { name: text('name').trim(), config: { type: 'postgres', config: parsed.data } };
-}
-
-function TestResult({ result }: { result: TestConnectionResult }) {
-  return result.ok ? (
-    <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-      <CheckCircle2 className="size-4" /> Connected · {result.serverVersion} · {result.latencyMs} ms
-    </p>
-  ) : (
-    <p className="text-destructive flex items-center gap-2 text-sm">
-      <XCircle className="size-4" /> {result.message}
-    </p>
-  );
 }
 
 export default function NewDataSourcePage({
