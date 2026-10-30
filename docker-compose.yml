@@ -1,0 +1,55 @@
+# Local development.
+#   pnpm db:up                       -> Postgres only (run the apps with `pnpm dev`)
+#   docker compose --profile app up  -> Postgres + web + server in containers
+name: vantage
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vantage
+      POSTGRES_PASSWORD: vantage
+      POSTGRES_DB: vantage
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vantage -d vantage']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    profiles: [app]
+    build:
+      context: .
+      target: server
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://vantage:vantage@postgres:5432/vantage
+      SERVER_PORT: 4000
+      WEB_ORIGIN: http://localhost:3000
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    profiles: [app]
+    build:
+      context: .
+      target: web
+      args:
+        API_URL: http://server:4000
+    environment:
+      NODE_ENV: production
+    ports:
+      - '3000:3000'
+    depends_on:
+      - server
+
+volumes:
+  postgres-data:

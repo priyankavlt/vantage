@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - tooling/*
+minimumReleaseAgeExclude:
+  - lucide-react@1.64.0
+  - tsdown@0.23.4
+
+# Only these dependencies may run install scripts.
+allowBuilds:
+  esbuild: true

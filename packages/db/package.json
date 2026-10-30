@@ -1,0 +1,32 @@
+{
+  "name": "@vantage/db",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "App metadata database: Drizzle schema, client and migrations.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.0",
+    "@vantage/eslint-config": "workspace:*",
+    "@vantage/tsconfig": "workspace:*",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.13.0"
+  }
+}

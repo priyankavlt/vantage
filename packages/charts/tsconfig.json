@@ -1,0 +1,4 @@
+{
+  "extends": "@vantage/tsconfig/react-library.json",
+  "include": ["src", "*.ts"]
+}

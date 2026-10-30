@@ -1,0 +1,26 @@
+{
+  "name": "@vantage/connectors",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Data source connector interface and implementations (Postgres first).",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vantage/shared": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@vantage/eslint-config": "workspace:*",
+    "@vantage/tsconfig": "workspace:*",
+    "eslint": "^10.13.0"
+  }
+}
