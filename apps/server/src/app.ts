@@ -13,6 +13,7 @@ import { HttpError } from './errors';
 import { registerAuthRoutes, registerSession } from './plugins/auth';
 import { dataSourceRoutes } from './routes/data-sources';
 import { healthRoutes } from './routes/health';
+import { queryRoutes } from './routes/queries';
 import { workspaceRoutes } from './routes/workspaces';
 
 export const VERSION = '0.1.0';
@@ -82,6 +83,7 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
   await app.register(healthRoutes, { prefix: '/api', version: VERSION });
   await app.register(workspaceRoutes, { prefix: '/api', ctx });
   await app.register(dataSourceRoutes, { prefix: '/api', ctx });
+  await app.register(queryRoutes, { prefix: '/api', ctx });
 
   return app;
 }
