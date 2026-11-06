@@ -27,6 +27,6 @@
     "@vantage/eslint-config": "workspace:*",
     "@vantage/tsconfig": "workspace:*",
     "drizzle-kit": "^0.31.11",
-    "eslint": "^10.13.0"
+    "eslint": "^10.14.0"
   }
 }
