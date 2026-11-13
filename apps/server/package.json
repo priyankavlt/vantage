@@ -15,14 +15,14 @@
     "auth:generate": "auth generate --config auth.cli.ts --output ../../packages/db/src/schema/auth.ts --yes && prettier --write ../../packages/db/src/schema/auth.ts"
   },
   "dependencies": {
-    "@fastify/cors": "^11.3.1",
+    "@fastify/cors": "^11.4.1",
     "@fastify/helmet": "^13.2.0",
     "@vantage/connectors": "workspace:*",
     "@vantage/db": "workspace:*",
     "@vantage/shared": "workspace:*",
-    "better-auth": "^1.7.14",
+    "better-auth": "^1.7.19",
     "drizzle-orm": "^0.45.4",
-    "fastify": "^5.12.7",
+    "fastify": "^5.12.8",
     "fastify-type-provider-zod": "^7.0.0",
     "pg": "^8.23.1",
     "zod": "^4.6.7"
@@ -31,9 +31,9 @@
     "@types/pg": "^8.23.1",
     "@vantage/eslint-config": "workspace:*",
     "@vantage/tsconfig": "workspace:*",
-    "auth": "1.7.14",
-    "eslint": "^10.13.0",
-    "tsdown": "^0.23.4",
+    "auth": "1.7.19",
+    "eslint": "^10.14.0",
+    "tsdown": "^0.23.7",
     "tsx": "^4.23.15"
   }
 }

@@ -20,6 +20,6 @@
   "devDependencies": {
     "@vantage/eslint-config": "workspace:*",
     "@vantage/tsconfig": "workspace:*",
-    "eslint": "^10.13.0"
+    "eslint": "^10.14.0"
   }
 }
